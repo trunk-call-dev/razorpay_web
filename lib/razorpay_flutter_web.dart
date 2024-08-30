@@ -78,27 +78,40 @@ class RazorpayFlutterPlugin {
       rjs.parentNode?.insertBefore(rzpjs, rjs);
 
       rzpjs.onLoad.listen((event) async {
-        var razorpayConstructor = await getProperty(web.window, 'Razorpay');
-        if (razorpayConstructor != null) {
-          var razorpay = callConstructor(razorpayConstructor, [jsObjOptions]);
+        try {
+          var razorpayConstructor = await getProperty(web.window, 'Razorpay');
+          if (razorpayConstructor != null) {
+            var razorpay = callConstructor(razorpayConstructor, [jsObjOptions]);
+            // Debugging: Log the object to ensure it's valid
+            print('Razorpay Object: $razorpay');
 
-          razorpay.callMethod('on', [
-            'payment.failed',
-            js.allowInterop((response) {
-              returnMap['type'] = _CODE_PAYMENT_ERROR;
-              dataMap['code'] = BASE_REQUEST_ERROR;
-              dataMap['message'] = response['error']['description'];
-              var metadataMap = <dynamic, dynamic>{};
-              metadataMap['payment_id'] =
-                  response['error']['metadata']['payment_id'];
-              dataMap['metadata'] = metadataMap;
-              dataMap['source'] = response['error']['source'];
-              dataMap['step'] = response['error']['step'];
-              returnMap['data'] = dataMap;
-              completer.complete(returnMap);
-            })
-          ]);
-          razorpay.callMethod('open');
+            razorpay.callMethod('on', [
+              'payment.failed',
+              js.allowInterop((response) {
+                returnMap['type'] = _CODE_PAYMENT_ERROR;
+                dataMap['code'] = BASE_REQUEST_ERROR;
+                dataMap['message'] = response['error']['description'];
+                var metadataMap = <dynamic, dynamic>{};
+                metadataMap['payment_id'] =
+                    response['error']['metadata']['payment_id'];
+                dataMap['metadata'] = metadataMap;
+                dataMap['source'] = response['error']['source'];
+                dataMap['step'] = response['error']['step'];
+                returnMap['data'] = dataMap;
+                completer.complete(returnMap);
+              })
+            ]);
+            razorpay.callMethod('open');
+          } else {
+            throw 'Razorpay constructor is null';
+          }
+        } catch (e) {
+          print('Error initializing Razorpay: $e');
+          returnMap['type'] = _CODE_PAYMENT_ERROR;
+          dataMap['code'] = UNKNOWN_ERROR;
+          dataMap['message'] = 'Failed to initialize payment';
+          returnMap['data'] = dataMap;
+          completer.complete(returnMap);
         }
       });
     }
