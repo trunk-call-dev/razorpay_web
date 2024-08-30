@@ -62,14 +62,10 @@ class RazorpayFlutterPlugin {
 
     var jsObjOptions = jsify(options);
 
-    // Ensuring jsObjOptions is a valid JavaScript object
-    if (jsObjOptions is Map || jsObjOptions is js.JsObject) {
-      var retryOptions = getProperty(jsObjOptions, 'retry');
-      if (retryOptions != null && getProperty(retryOptions, 'enabled') == true) {
-        options['retry'] = true;
-      } else {
-        options['retry'] = false;
-      }
+    // Safely check for the 'retry' property and its 'enabled' property
+    var retryOptions = getProperty(jsObjOptions, 'retry');
+    if (retryOptions != null && getProperty(retryOptions, 'enabled') == true) {
+      options['retry'] = true;
     } else {
       options['retry'] = false;
     }
