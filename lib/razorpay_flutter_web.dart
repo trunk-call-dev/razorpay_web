@@ -61,8 +61,11 @@ class RazorpayFlutterPlugin {
     });
 
     var jsObjOptions = jsify(options);
-    if (jsObjOptions.hasProperty('retry')) {
-      if (jsObjOptions['retry']['enabled'] == true) {
+
+    // Ensuring jsObjOptions is a valid JavaScript object
+    if (jsObjOptions is Map || jsObjOptions is js.JsObject) {
+      var retryOptions = getProperty(jsObjOptions, 'retry');
+      if (retryOptions != null && getProperty(retryOptions, 'enabled') == true) {
         options['retry'] = true;
       } else {
         options['retry'] = false;
@@ -79,11 +82,9 @@ class RazorpayFlutterPlugin {
       rjs.parentNode?.insertBefore(rzpjs, rjs);
 
       rzpjs.onLoad.listen((event) async {
-        // Accessing the global "Razorpay" object in JavaScript
         var razorpayConstructor = await getProperty(web.window, 'Razorpay');
         if (razorpayConstructor != null) {
-          var razorpay =
-              jsify(callMethod(razorpayConstructor, '', [jsObjOptions]));
+          var razorpay = callConstructor(razorpayConstructor, [jsObjOptions]);
 
           razorpay.callMethod('on', [
             'payment.failed',
