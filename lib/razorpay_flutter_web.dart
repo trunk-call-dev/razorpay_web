@@ -62,7 +62,6 @@ class RazorpayFlutterPlugin {
 
     var jsObjOptions = jsify(options);
 
-    // Safely check for the 'retry' property and its 'enabled' property
     var retryOptions = getProperty(jsObjOptions, 'retry');
     if (retryOptions != null && getProperty(retryOptions, 'enabled') == true) {
       options['retry'] = true;
@@ -82,36 +81,42 @@ class RazorpayFlutterPlugin {
           var razorpayConstructor = await getProperty(web.window, 'Razorpay');
           if (razorpayConstructor != null) {
             var razorpay = callConstructor(razorpayConstructor, [jsObjOptions]);
-            // Debugging: Log the object to ensure it's valid
-            print('Razorpay Object: $razorpay');
 
-            razorpay.callMethod('on', [
-              'payment.failed',
-              js.allowInterop((response) {
-                returnMap['type'] = _CODE_PAYMENT_ERROR;
-                dataMap['code'] = BASE_REQUEST_ERROR;
-                dataMap['message'] = response['error']['description'];
-                var metadataMap = <dynamic, dynamic>{};
-                metadataMap['payment_id'] =
-                    response['error']['metadata']['payment_id'];
-                dataMap['metadata'] = metadataMap;
-                dataMap['source'] = response['error']['source'];
-                dataMap['step'] = response['error']['step'];
-                returnMap['data'] = dataMap;
-                completer.complete(returnMap);
-              })
-            ]);
-            razorpay.callMethod('open');
+            // Verify if 'on' method exists on the object
+            var hasOnMethod = getProperty(razorpay, 'on');
+            if (hasOnMethod != null) {
+              razorpay.callMethod('on', [
+                'payment.failed',
+                js.allowInterop((response) {
+                  returnMap['type'] = _CODE_PAYMENT_ERROR;
+                  dataMap['code'] = BASE_REQUEST_ERROR;
+                  dataMap['message'] = response['error']['description'];
+                  var metadataMap = <dynamic, dynamic>{};
+                  metadataMap['payment_id'] =
+                  response['error']['metadata']['payment_id'];
+                  dataMap['metadata'] = metadataMap;
+                  dataMap['source'] = response['error']['source'];
+                  dataMap['step'] = response['error']['step'];
+                  returnMap['data'] = dataMap;
+                  completer.complete(returnMap);
+                })
+              ]);
+              razorpay.callMethod('open');
+            } else {
+              throw 'Razorpay object does not have an "on" method';
+            }
           } else {
             throw 'Razorpay constructor is null';
           }
         } catch (e) {
           print('Error initializing Razorpay: $e');
-          returnMap['type'] = _CODE_PAYMENT_ERROR;
-          dataMap['code'] = UNKNOWN_ERROR;
-          dataMap['message'] = 'Failed to initialize payment';
-          returnMap['data'] = dataMap;
-          completer.complete(returnMap);
+          if (!completer.isCompleted) {
+            returnMap['type'] = _CODE_PAYMENT_ERROR;
+            dataMap['code'] = UNKNOWN_ERROR;
+            dataMap['message'] = 'Failed to initialize payment';
+            returnMap['data'] = dataMap;
+            completer.complete(returnMap);
+          }
         }
       });
     }
